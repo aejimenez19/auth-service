@@ -1,17 +1,23 @@
 package com.aejimenez.dev.auth_service.services.impl;
 
+import com.aejimenez.dev.auth_service.dtos.UserLoginRequest;
+import com.aejimenez.dev.auth_service.dtos.UserLoginResponse;
 import com.aejimenez.dev.auth_service.dtos.UserRegisterRequest;
 import com.aejimenez.dev.auth_service.entities.Rol;
 import com.aejimenez.dev.auth_service.entities.Roles;
 import com.aejimenez.dev.auth_service.entities.User;
+import com.aejimenez.dev.auth_service.exeptions.PasswordNotMatch;
 import com.aejimenez.dev.auth_service.exeptions.RoleNotFoundException;
 import com.aejimenez.dev.auth_service.exeptions.UserAlreadyExists;
+import com.aejimenez.dev.auth_service.exeptions.UserNotFound;
 import com.aejimenez.dev.auth_service.repositories.RolRepository;
 import com.aejimenez.dev.auth_service.repositories.UserRepository;
 import com.aejimenez.dev.auth_service.services.AuthService;
+import com.aejimenez.dev.auth_service.services.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +26,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     @Override
     public UserRegisterRequest registerUser(UserRegisterRequest user) {
@@ -32,6 +39,21 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(newUser);
 
         return mapToUserRegisterRequest(newUser);
+    }
+
+    @Override
+    public UserLoginResponse loginUser(UserLoginRequest userRequest) {
+        User user = userRepository.findByUsername(userRequest.getUsername())
+                .orElseThrow(() -> new UserNotFound(userRequest.getUsername()));
+
+        if (!passwordEncoder.matches(userRequest.getPassword(), user.getPassword())) {
+            throw new PasswordNotMatch();
+        }
+        String token = jwtService.generateToken(user);
+        return UserLoginResponse.builder()
+                .token(token)
+                .username(user.getUsername())
+                .build();
     }
 
     private void validateRoleAndUsername(UserRegisterRequest user) {

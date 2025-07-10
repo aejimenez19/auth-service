@@ -1,14 +1,13 @@
 package com.aejimenez.dev.auth_service.controllers;
 
 import com.aejimenez.dev.auth_service.dtos.RequestResponse;
+import com.aejimenez.dev.auth_service.dtos.UserLoginRequest;
+import com.aejimenez.dev.auth_service.dtos.UserLoginResponse;
 import com.aejimenez.dev.auth_service.dtos.UserRegisterRequest;
 import com.aejimenez.dev.auth_service.services.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController()
 @RequestMapping("/auth")
@@ -16,9 +15,28 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
     private final AuthService authService;
 
+    /**
+     * Endpoint to register a new user.
+     *
+     * @param request the user registration request containing user details
+     * @return a response entity containing the registered user details
+     */
     @PostMapping()
     public ResponseEntity<RequestResponse<UserRegisterRequest>> userRegister(@RequestBody UserRegisterRequest request) {
            UserRegisterRequest registeredUser = authService.registerUser(request);
            return ResponseEntity.ok(new RequestResponse<>("User registered successfully", registeredUser));
+    }
+
+
+    /**
+     * Endpoint to log in a user.
+     * Currently not implemented.
+     *
+     * @return a response entity indicating that the login functionality is not implemented
+     */
+    @GetMapping
+    public ResponseEntity<RequestResponse<UserLoginResponse>> userLogin(@RequestBody UserLoginRequest userLoginRequest) {
+        UserLoginResponse userLoginResponse = authService.loginUser(userLoginRequest);
+        return ResponseEntity.ok(new RequestResponse<>("User successfully logged in", userLoginResponse));
     }
 }

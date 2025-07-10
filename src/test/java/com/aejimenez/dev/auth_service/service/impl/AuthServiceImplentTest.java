@@ -1,12 +1,18 @@
 package com.aejimenez.dev.auth_service.service.impl;
 
+import com.aejimenez.dev.auth_service.dtos.UserLoginRequest;
+import com.aejimenez.dev.auth_service.dtos.UserLoginResponse;
 import com.aejimenez.dev.auth_service.dtos.UserRegisterRequest;
 import com.aejimenez.dev.auth_service.entities.Rol;
 import com.aejimenez.dev.auth_service.entities.Roles;
+import com.aejimenez.dev.auth_service.entities.User;
+import com.aejimenez.dev.auth_service.exeptions.PasswordNotMatch;
 import com.aejimenez.dev.auth_service.exeptions.RoleNotFoundException;
 import com.aejimenez.dev.auth_service.exeptions.UserAlreadyExists;
+import com.aejimenez.dev.auth_service.exeptions.UserNotFound;
 import com.aejimenez.dev.auth_service.repositories.RolRepository;
 import com.aejimenez.dev.auth_service.repositories.UserRepository;
+import com.aejimenez.dev.auth_service.services.JwtService;
 import com.aejimenez.dev.auth_service.services.impl.AuthServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,8 +36,11 @@ public class AuthServiceImplentTest {
         @Mock
         private PasswordEncoder passwordEncoder;
 
+        @Mock
+        private JwtService jwtService;
+
         @InjectMocks
-        private AuthServiceImpl userService;
+        private AuthServiceImpl authService;
 
         @Test
         void registerUserSuccessfully() {
@@ -49,7 +58,7 @@ public class AuthServiceImplentTest {
                     Rol.builder().rol(Roles.ROLE_USER).build()));
 
 
-            UserRegisterRequest response = userService.registerUser(request);
+            UserRegisterRequest response = authService.registerUser(request);
 
             assertEquals("John Doe", response.getName());
             assertEquals("123456789", response.getPhone());
@@ -65,7 +74,7 @@ public class AuthServiceImplentTest {
                     .build();
 
 
-            assertThrows(RoleNotFoundException.class, () -> userService.registerUser(request));
+            assertThrows(RoleNotFoundException.class, () -> authService.registerUser(request));
         }
 
         @Test
@@ -77,7 +86,61 @@ public class AuthServiceImplentTest {
 
             when(userRepository.existsByUsername("existinguser")).thenReturn(true);
 
-            assertThrows(UserAlreadyExists.class, () -> userService.registerUser(request));
+            assertThrows(UserAlreadyExists.class, () -> authService.registerUser(request));
         }
+
+
+        @Test
+        void returnsTokenWhenLoginCredentialsAreValid() {
+            UserLoginRequest request = UserLoginRequest.builder()
+                    .username("validUser")
+                    .password("validPassword")
+                    .build();
+
+            User user = User.builder()
+                    .username("validUser")
+                    .password("encodedPassword")
+                    .build();
+
+            when(userRepository.findByUsername("validUser")).thenReturn(java.util.Optional.of(user));
+            when(passwordEncoder.matches("validPassword", "encodedPassword")).thenReturn(true);
+            when(jwtService.generateToken(user)).thenReturn("generatedToken");
+
+            UserLoginResponse response = authService.loginUser(request);
+
+            assertEquals("validUser", response.getUsername());
+            assertEquals("generatedToken", response.getToken());
+        }
+
+        @Test
+        void throwsExceptionWhenUserDoesNotExist() {
+            UserLoginRequest request = UserLoginRequest.builder()
+                    .username("nonExistentUser")
+                    .password("password")
+                    .build();
+
+            when(userRepository.findByUsername("nonExistentUser")).thenReturn(java.util.Optional.empty());
+
+            assertThrows(UserNotFound.class, () -> authService.loginUser(request));
+        }
+
+        @Test
+        void throwsExceptionWhenPasswordDoesNotMatch() {
+            UserLoginRequest request = UserLoginRequest.builder()
+                    .username("validUser")
+                    .password("wrongPassword")
+                    .build();
+
+            User user = User.builder()
+                    .username("validUser")
+                    .password("encodedPassword")
+                    .build();
+
+            when(userRepository.findByUsername("validUser")).thenReturn(java.util.Optional.of(user));
+            when(passwordEncoder.matches("wrongPassword", "encodedPassword")).thenReturn(false);
+
+            assertThrows(PasswordNotMatch.class, () -> authService.loginUser(request));
+        }
+
 
 }

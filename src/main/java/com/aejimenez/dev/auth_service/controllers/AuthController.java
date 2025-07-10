@@ -27,12 +27,11 @@ public class AuthController {
            return ResponseEntity.ok(new RequestResponse<>("User registered successfully", registeredUser));
     }
 
-
     /**
      * Endpoint to log in a user.
-     * Currently not implemented.
      *
-     * @return a response entity indicating that the login functionality is not implemented
+     * @param userLoginRequest the user login request containing login credentials
+     * @return a response entity containing the login response with user details
      */
     @GetMapping
     public ResponseEntity<RequestResponse<UserLoginResponse>> userLogin(@RequestBody UserLoginRequest userLoginRequest) {
